@@ -1,34 +1,55 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+ 
+import { useState } from 'react';
+import Input from './components/Input';
 
-function App() {
-  const [count, setCount] = useState(0)
+function App() { 
+  const [input, setInput] = useState<string>('');
+  const [chatHistory, setChatHistory] = useState<Array<{ message: string, isUser: boolean }>>([]);
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(event.target.value);
+  };
+
+  const handleSend = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (input.trim() === '') return;
+
+    setChatHistory([
+      ...chatHistory,
+      { message: input, isUser: true }
+    ]);
+
+    setChatHistory((prevChatHistory) => [
+      ...prevChatHistory,
+      { message: `You asked about: ${input}!`, isUser: false }
+    ]);
+
+    setInput('');
+  };
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+  <div className="flex flex-col h-screen bg-[#2e223c]">
+  <div className="flex-grow p-4 overflow-auto space-y-4">
+    {chatHistory.map((message, index) => (
+      <div
+        key={index}
+        className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+      >
+        <div
+          className={`max-w-xs p-3 rounded-lg ${message.isUser ? 'bg-[#3c2c4d] text-white' : 'bg-gray-200'}`}
+        >
+          {message.message}
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    ))}
+  </div>
+  <div className="p-4 "> 
+    <Input
+    value={input}
+          onChange={handleInputChange}
+          onSubmit={handleSend}/>
+  </div>
+</div>
   )
 }
 
