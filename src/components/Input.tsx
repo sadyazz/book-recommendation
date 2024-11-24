@@ -16,7 +16,7 @@ const Input: React.FC<InputProps> = ({ value, onChange, onSubmit }) => {
         value={value}
         onChange={onChange}
         className="flex-grow p-2 rounded-full bg-[#3c2c4d] text-white outline-none transition-all"
-        placeholder="Type a message..."
+        placeholder="Send a genre..."
       /> 
       <Button onClick={onSubmit}/>
     </form>
