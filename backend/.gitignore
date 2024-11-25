@@ -1,0 +1,39 @@
+# Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.pdb
+
+# Virtual environment folder
+venv/
+env/
+.venv/
+
+# IDE/Editor settings
+.vscode/
+.idea/
+
+# Jupyter Notebook checkpoint files
+.ipynb_checkpoints/
+
+# Python distribution files
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Pytest cache
+.pytest_cache/
+
+# Flake8 config files
+flake8
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Local config files
+*.local
