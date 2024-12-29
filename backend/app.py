@@ -1,13 +1,15 @@
+import random
+import numpy as np
 from flask import Flask, request, jsonify
 import pandas as pd
 import uuid
-from flask_cors import CORS 
+from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 CORS(app)
-app.secret_key = 'your_secret_key' 
+app.secret_key = 'your_secret_key'
 
 books_df = pd.read_csv("books.csv")
 
@@ -46,7 +48,7 @@ def start_session():
     ]
 
     if filtered_books.empty:
-        return jsonify({"message": "No more books available for this genre."}), 400
+        return jsonify({"message": "Nema knjiga dostupnih za ovaj žanr."}), 400
 
     recommendation = filtered_books.sample(1).iloc[0]
     session_data[session_id]["last_book"] = recommendation['Book']
@@ -129,7 +131,7 @@ def recommend_book():
             ]
         })
 
-    return jsonify({"message": "Nema više knjiga za preporuku u ovom žanru."})
+    return jsonify({"message": "No more book recommendations for this genre."})
 
 if __name__ == '__main__':
     app.run(debug=True)
