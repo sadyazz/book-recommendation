@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import Input from './components/Input';
 import axios from 'axios';
 import BookMessage from './components/BookMessage'; 
-import { BsFileBarGraph } from "react-icons/bs"; 
+import { FaBook } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
+
+type BookRecommendation = {
+  book: string;
+  author: string;
+  description: string;
+  genres: string[];
+};
 
 function App() { 
   const [input, setInput] = useState<string>(''); 
@@ -12,16 +19,17 @@ function App() {
   const [currentBookIndex, setCurrentBookIndex] = useState<number>(0); 
   const [isLoading, setIsLoading] = useState<boolean>(false); 
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [topRecommendations, setTopRecommendations] = useState<BookRecommendation[] | null>(null);
+  const [showRecommendations, setShowRecommendations] = useState(false);
   const welcomeMessageSent = useRef(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
-  const [graph, setGraph] = useState<string | null>(null);
-const [showGraph, setShowGraph] = useState(false);
-
+  const topRecommendationsRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInput(event.target.value);
   };
-  
+
   const handleSend = async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -76,85 +84,83 @@ const [showGraph, setShowGraph] = useState(false);
       ]);
     }
   };
-  
 
-const handleLike = async (sessionId: string) => {
-  if (!sessionId) return;
-  setIsLoading(true);
+  const handleLike = async (sessionId: string) => {
+    if (!sessionId) return;
+    setIsLoading(true);
 
-  try {
-    const response = await axios.post('http://localhost:5000/recommend', {
-      session_id: sessionId,
-      reaction: "👍",
-    });
-    console.log("like response", response);
-setIsLoading(false);
-    if (response.data) {
-      setBooks((prevBooks) => [...prevBooks, response.data]);
+    try {
+      const response = await axios.post('http://localhost:5000/recommend', {
+        session_id: sessionId,
+        reaction: "👍",
+      });
+      console.log("like response", response);
+      setIsLoading(false);
+      if (response.data) {
+        setBooks((prevBooks) => [...prevBooks, response.data]);
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            message: (
+              <BookMessage
+                title={response.data.book}
+                author={response.data.author}
+                genres={response.data.genres}
+                onDislike={() => handleDislike(sessionId)}
+                onLike={() => handleLike(sessionId)}
+              />
+            ),
+            isUser: false,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error while liking the book:", error);
       setChatHistory((prev) => [
         ...prev,
-        {
-          message: (
-            <BookMessage
-              title={response.data.book}
-              author={response.data.author}
-              genres={response.data.genres}
-              onDislike={() => handleDislike(sessionId)}
-              onLike={() => handleLike(sessionId)}
-            />
-          ),
-          isUser: false,
-        },
+        { message: "Error fetching the next recommendation.", isUser: false },
       ]);
     }
-  } catch (error) {
-    console.error("Error while liking the book:", error);
-    setChatHistory((prev) => [
-      ...prev,
-      { message: "Error fetching the next recommendation.", isUser: false },
-    ]);
-  }
-};
+  };
 
-const handleDislike = async (sessionId: string) => {
-  if (!sessionId) return;
-setIsLoading(true);
-  try {
-    const response = await axios.post('http://localhost:5000/recommend', {
-      session_id: sessionId,
-      reaction: "👎",
-    });
-    console.log("dislike response je ", response)
-setIsLoading(false);
-    if (response.data) {
-      setBooks((prevBooks) => [...prevBooks, response.data]);
+  const handleDislike = async (sessionId: string) => {
+    if (!sessionId) return;
+    setIsLoading(true);
+    try {
+      const response = await axios.post('http://localhost:5000/recommend', {
+        session_id: sessionId,
+        reaction: "👎",
+      });
+      console.log("dislike response je ", response);
+      setIsLoading(false);
+      if (response.data) {
+        setBooks((prevBooks) => [...prevBooks, response.data]);
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            message: (
+              <BookMessage
+                title={response.data.book}
+                author={response.data.author}
+                genres={response.data.genres}
+                onDislike={() => handleDislike(sessionId)}
+                onLike={() => handleLike(sessionId)}
+              />
+            ),
+            isUser: false,
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error while disliking the book:", error);
       setChatHistory((prev) => [
         ...prev,
-        {
-          message: (
-            <BookMessage
-              title={response.data.book}
-              author={response.data.author}
-              genres={response.data.genres}
-              onDislike={() => handleDislike(sessionId)}
-              onLike={() => handleLike(sessionId)}
-            />
-          ),
-          isUser: false,
-        },
+        { message: "Error fetching the next recommendation.", isUser: false },
       ]);
     }
-  } catch (error) {
-    console.error("Error while disliking the book:", error);
-    setChatHistory((prev) => [
-      ...prev,
-      { message: "Error fetching the next recommendation.", isUser: false },
-    ]);
-  }
-};
+  };
 
   useEffect(() => {
-
     if (!welcomeMessageSent.current) {
       setChatHistory((prevChatHistory) => [
         ...prevChatHistory,
@@ -170,9 +176,73 @@ setIsLoading(false);
     }
   }, [chatHistory]);
 
+  const fetchTopRecommendations = async () => {
+    if (!sessionId) {
+      setChatHistory((prev) => [
+        ...prev,
+        { message: "Please send a genre first.", isUser: false },
+      ]);
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const response = await axios.post('http://localhost:5000/top_recommendations', { session_id: sessionId });
+  
+      const recommendations = response.data.recommendations;
+      if (recommendations && recommendations.length > 0) {
+        setTopRecommendations(recommendations);
+        setShowRecommendations(true);
+      } else {
+        setChatHistory((prev) => [
+          ...prev,
+          { message: "There are no recommendations available yet. Try liking or disliking more books.", isUser: false },
+        ]);
+      }
+    } catch (error) {
+
+      console.error("Error fetching top recommendations:", error);
+  
+      setChatHistory((prev) => [
+        ...prev,
+        { message: "An error occurred while loading recommendations. Please try again later.", isUser: false },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        topRecommendationsRef.current && 
+        !topRecommendationsRef.current.contains(event.target as Node) &&
+        buttonRef.current && 
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowRecommendations(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-[#2e223c]">
-      
+      <button
+        ref={buttonRef}
+        onClick={fetchTopRecommendations}
+        className="p-2 rounded absolute top-4 right-4 z-10 "
+      >
+        <FaBook className='text-white'/>
+      </button>
+
       <div 
         ref={chatContainerRef} 
         className="flex-grow p-4 overflow-auto space-y-4 no-scrollbar scroll-smooth"
@@ -182,7 +252,7 @@ setIsLoading(false);
             key={index}
             className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
           >
-             {!message.isUser && (
+            {!message.isUser && (
               <div className="flex-shrink-0 mr-3"> 
                 <img 
                   src="src\assets\bb8.png" 
@@ -198,7 +268,8 @@ setIsLoading(false);
             </div>
           </div>
         ))}
-         {isLoading && (
+
+        {isLoading && (
           <div className="flex justify-start">
             <div className="max-w-xs p-3 text-white text-5xl">
               <span className="loading-dots">.</span>
@@ -206,6 +277,46 @@ setIsLoading(false);
           </div>
         )}
       </div>
+
+      {showRecommendations && topRecommendations && (
+  <div 
+    ref={topRecommendationsRef} 
+    className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white pt-2.5 pb-5 p-8 rounded-2xl shadow-xl z-50 max-w-lg w-full overflow-y-auto">
+    <button
+      onClick={() => setShowRecommendations(false)}
+      className="absolute top-2 right-2 p-2 text-black"
+    >
+      <IoClose className="text-2xl" />
+    </button>
+    
+    <div className="mt-6">
+      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800">Top 3 Books</h2>
+      <ul className="space-y-6">
+        {topRecommendations.map((recommendation, index) => (
+          <li 
+            key={index} 
+            className={`pb-4 ${index !== topRecommendations.length - 1 ? 'border-b' : ''}`}
+          >
+            <h3 className="text-xl font-bold text-gray-800">{recommendation.book}</h3>
+            <p className="text-gray-600 italic">{recommendation.author}</p>
+            <div className="mt-2">
+              <div className="space-x-2 mt-2">
+                {recommendation.genres.map((genre, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 text-xs rounded-full bg-[#6b4c9c] text-white"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+)}
       <div className="p-4 pt-0">
         <Input
           value={input}
