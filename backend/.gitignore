@@ -34,6 +34,16 @@ flake8
 
 # Logs
 *.log
+logs/
 
 # Local config files
 *.local
+
+# Flask specific files
+instance/
+*.sqlite
+*.db
+
+# Other
+*.bak
+*.swp
