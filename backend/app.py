@@ -5,15 +5,17 @@ import uuid
 from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier  # Importujemo Random Forest
 from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 CORS(app)
 app.secret_key = 'your_secret_key'
 
+# Učitajte podatke o knjigama
 books_df = pd.read_csv("books.csv")
 
+# Kreirajemo TF-IDF vektorizator koji koristi tekstualne informacije iz žanrova za treniranje
 tfidf_vectorizer = TfidfVectorizer(stop_words='english')
 books_df['combined_features'] = (
     books_df['Genre1'].fillna('') + ' ' +
@@ -22,16 +24,16 @@ books_df['combined_features'] = (
 )
 
 tfidf_matrix = tfidf_vectorizer.fit_transform(books_df['combined_features'])
-
 similarity_matrix = cosine_similarity(tfidf_matrix)
 
 session_data = {}
 
 reaction_encoder = LabelEncoder()
 
-model = LogisticRegression()
-trained_models = {} 
+# Kreiramo rečnik za trenirane modele po sesijama
+trained_models = {}
 
+# Treniranje modela koristeći samo žanrove
 def train_model(session_id):
     user_session = session_data[session_id]
     liked_books = user_session["liked_books"]
@@ -43,12 +45,12 @@ def train_model(session_id):
     for book in liked_books:
         idx = books_df[books_df['Book'] == book].index[0]
         train_data.append(tfidf_matrix[idx].toarray()[0]) 
-        train_labels.append(1) 
+        train_labels.append(1)  # Lajk je označen kao 1
 
     for book in disliked_books:
         idx = books_df[books_df['Book'] == book].index[0]
         train_data.append(tfidf_matrix[idx].toarray()[0]) 
-        train_labels.append(0) 
+        train_labels.append(0)  # Dislajk je označen kao 0
 
     if len(train_data) < 5 or len(set(train_labels)) < 2:
         return None
@@ -56,29 +58,32 @@ def train_model(session_id):
     train_data = np.array(train_data) 
     train_labels = np.array(train_labels)
 
-    model = LogisticRegression()
-    model.fit(train_data, train_labels)
-    return model
+    # Kreiramo i treniramo Random Forest model sa manjim brojem drveća za bolju brzinu
+    rf_model = RandomForestClassifier(n_estimators=30, random_state=42)  # Smanjivanje broja drveća
+    rf_model.fit(train_data, train_labels)
+    return rf_model
 
+# Predikcija na osnovu treniranog modela
 def predict_books(session_id):
     user_session = session_data[session_id]
     model = trained_models.get(session_id)
 
     if model is None:
+        # Ako model nije treniran, predloži knjige na osnovu žanra
         recommended_indices = books_df[
             ~books_df['Book'].isin(user_session["liked_books"] + user_session["disliked_books"])
         ].index.tolist()
         return recommended_indices[:3]
 
     X_all = tfidf_matrix.toarray()
-    predictions = model.predict_proba(X_all)[:, 1] 
+    predictions = model.predict_proba(X_all)[:, 1]  # Koristimo verovatnoću za lajk (1)
     sorted_indices = predictions.argsort()[::-1]
 
     recommended_indices = [
         idx for idx in sorted_indices
         if books_df.iloc[idx]['Book'] not in user_session["liked_books"]
         and books_df.iloc[idx]['Book'] not in user_session["disliked_books"]
-    ][:3] 
+    ][:3]  # Preporučujemo 3 knjige
     return recommended_indices
 
 @app.route('/start', methods=['POST'])
@@ -96,11 +101,10 @@ def start_session():
         "last_book": None
     }
 
-    filtered_books = books_df[
-        books_df[['Genre1', 'Genre2', 'Genre3']].apply(
-            lambda row: genre in row.str.lower().fillna('').values, axis=1
-        )
-    ]
+    # Filtriramo knjige na osnovu žanra
+    filtered_books = books_df[books_df[['Genre1', 'Genre2', 'Genre3']].apply(
+        lambda row: genre in row.str.lower().fillna('').values, axis=1
+    )]
 
     if filtered_books.empty:
         return jsonify({"message": "No books available for this genre."}), 400
@@ -109,7 +113,7 @@ def start_session():
     session_data[session_id]["last_book"] = recommendation['Book']
 
     return jsonify({
-        "message": "Sesija započeta. Ovo je prva preporuka:",
+        "message": "Sesija započeta. Ovo je prva preporuka: ",
         "session_id": session_id,
         "book": recommendation['Book'],
         "author": recommendation['Author'],
