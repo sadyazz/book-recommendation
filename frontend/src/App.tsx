@@ -290,7 +290,7 @@ function App() {
     </button>
     
     <div className="mt-6">
-      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800">Top 3 Books</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800">Recommendations</h2>
       <ul className="space-y-6">
         {topRecommendations.map((recommendation, index) => (
           <li 
