@@ -6,7 +6,6 @@ from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 CORS(app)
@@ -26,8 +25,6 @@ tfidf_matrix = tfidf_vectorizer.fit_transform(books_df['combined_features'])
 similarity_matrix = cosine_similarity(tfidf_matrix)
 
 session_data = {}
-
-reaction_encoder = LabelEncoder()
 
 model = LogisticRegression()
 trained_models = {} 
@@ -56,7 +53,7 @@ def train_model(session_id):
     train_data = np.array(train_data) 
     train_labels = np.array(train_labels)
 
-    model = LogisticRegression()
+    trained_models[session_id] = model 
     model.fit(train_data, train_labels)
     return model
 
@@ -197,6 +194,7 @@ def recommend_book():
 
     return jsonify({"message": "Nema više preporuka za ovaj žanr."})
 
+
 @app.route('/top_recommendations', methods=['POST'])
 def top_recommendations():
     session_id = request.json.get('session_id')
@@ -207,40 +205,19 @@ def top_recommendations():
     if model is None:
         return jsonify({"error": "Not enough data to generate recommendations. Please like or dislike more books."}), 400
 
-    user_session = session_data[session_id]
-    user_books = set(user_session["liked_books"] + user_session["disliked_books"])
+    recommended_indices = predict_books(session_id)
 
     recommendations = []
-    for idx, book_title in enumerate(books_df['Book']):
-        if book_title in user_books:
-            continue
-        
-        author = books_df.loc[idx, 'Author'] if 'Author' in books_df.columns else "Unknown"
-        
-        genres = [genre for genre in [books_df.loc[idx, 'Genre1'], books_df.loc[idx, 'Genre2'], books_df.loc[idx, 'Genre3']] if genre]
-
-        book_vector = tfidf_matrix[idx].toarray()[0].reshape(1, -1)
-        score = model.predict_proba(book_vector)[0][1] 
-
+    for idx in recommended_indices:
+        book_row = books_df.iloc[idx]
         recommendations.append({
-            'book': book_title,
-            'author': author,
-            'genres': genres,
-            'score': score
+            'book': book_row['Book'],
+            'author': book_row.get('Author', 'Unknown'),
+            'genres': [book_row['Genre1'], book_row['Genre2'], book_row['Genre3']]
         })
 
-    recommendations = sorted(recommendations, key=lambda x: x['score'], reverse=True)[:3]
+    return jsonify({"recommendations": recommendations})
 
-    return jsonify({
-        "recommendations": [
-            {
-                "book": r['book'],
-                "author": r['author'],
-                "genres": r['genres']
-            }
-            for r in recommendations
-        ]
-    })
 
 if __name__ == '__main__':
     app.run(debug=True)
