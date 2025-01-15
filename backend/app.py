@@ -21,7 +21,6 @@ books_df['combined_features'] = (
 )
 
 tfidf_matrix = tfidf_vectorizer.fit_transform(books_df['combined_features'])
-
 similarity_matrix = cosine_similarity(tfidf_matrix)
 
 session_data = {}

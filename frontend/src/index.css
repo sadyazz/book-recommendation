@@ -12,7 +12,6 @@
     display: flex;
     flex-direction: column;
     background-color: #2e223c;
-    padding: 0 20rem;  
   }
 
   @layer utilities {  

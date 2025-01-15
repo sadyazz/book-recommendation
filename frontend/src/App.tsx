@@ -234,11 +234,11 @@ function App() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-[#2e223c]">
+    <div className="flex flex-col h-screen bg-[#2e223c] md:px-10 lg:px-30 xl:px-40 2xl:px-52">
       <button
         ref={buttonRef}
         onClick={fetchTopRecommendations}
-        className="p-2 rounded absolute top-4 right-4 z-10 "
+        className="p-2 rounded-full absolute top-4 right-4 z-10 bg-[#47355c]"
       >
         <FaBook className='text-white'/>
       </button>
@@ -262,7 +262,7 @@ function App() {
               </div>
             )}
             <div
-              className={`w-fit p-3 rounded-lg ${message.isUser ? 'bg-[#3c2c4d] text-white' : ' text-white border border-white p-4 rounded-xl'}`}
+              className={`w-fit p-3 rounded-lg ${message.isUser ? 'bg-[#3c2c4d] text-white md:text-base text-sm' : ' text-white border border-white rounded-xl'}`}
             > 
               {typeof message.message === 'string' ? message.message : <div>{message.message}</div>}
             </div>
@@ -281,7 +281,7 @@ function App() {
       {showRecommendations && topRecommendations && (
   <div 
     ref={topRecommendationsRef} 
-    className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white pt-2.5 pb-5 p-8 rounded-2xl shadow-xl z-50 max-w-lg w-full overflow-y-auto">
+    className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white md:pt-2.5 md:pb-5 md:p-8 px-4 rounded-2xl shadow-xl z-50 max-w-lg lg:w-full w-[90%] overflow-y-auto">
     <button
       onClick={() => setShowRecommendations(false)}
       className="absolute top-2 right-2 p-2 text-black"
@@ -290,21 +290,21 @@ function App() {
     </button>
     
     <div className="mt-6">
-      <h2 className="text-2xl font-semibold mb-4 text-center text-gray-800">Recommendations</h2>
-      <ul className="space-y-6">
+      <h2 className="md:text-2xl text-xl font-semibold mb-4 text-center text-gray-800">Recommendations</h2>
+      <ul className="md:space-y-6">
         {topRecommendations.map((recommendation, index) => (
           <li 
             key={index} 
             className={`pb-4 ${index !== topRecommendations.length - 1 ? 'border-b' : ''}`}
           >
-            <h3 className="text-xl font-bold text-gray-800">{recommendation.book}</h3>
+            <h3 className="md:text-xl text-lg font-bold text-gray-800">{recommendation.book}</h3>
             <p className="text-gray-600 italic">{recommendation.author}</p>
             <div className="mt-2">
-              <div className="space-x-2 mt-2">
+              <div className="space-x-2 mt-2 flex flex-wrap">
                 {recommendation.genres.map((genre, index) => (
                   <span
                     key={index}
-                    className="px-3 py-1 text-xs rounded-full bg-[#6b4c9c] text-white"
+                    className="px-3 py-1 md:text-xs text-[13px] rounded-full bg-[#6b4c9c] text-white"
                   >
                     {genre}
                   </span>
@@ -317,7 +317,7 @@ function App() {
     </div>
   </div>
 )}
-      <div className="p-4 pt-0">
+      <div className="p-4 pt-0 flex justify-center">
         <Input
           value={input}
           onChange={handleInputChange}
